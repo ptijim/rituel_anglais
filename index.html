@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rituel d’anglais — Cycle 3 (2 pictos)</title>
+<style>
+  :root{
+    --ink:#111;
+    --muted:#555;
+    --bg:#ffffff;
+    --panel:#f7f8fb;
+    --border:#d9dee7;
+    --accent:#2563eb;
+    --accent2:#22c55e;
+    --chip:#eef2f7;
+  }
+  html,body{height:100%}
+  body{margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans"; color:var(--ink); background:var(--bg);}
+  header{border-bottom:1px solid var(--border); background:#fff; position:sticky; top:0; z-index:10}
+  .wrap{max-width:1200px; margin:0 auto; padding:14px 16px}
+  h1{margin:.2rem 0 .1rem; font-size:clamp(1.4rem, 1.2rem + 1.8vw, 2.4rem);}
+  .subtitle{color:var(--muted)}
+  .toolbar{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
+  .btn{border:1px solid var(--border); background:#fff; color:var(--ink); padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:600}
+  .btn:hover{background:#fafafa}
+  .btn-accent{background:var(--accent); color:#fff; border-color:transparent}
+  .btn-danger{background:#ef4444; color:#fff; border-color:transparent}
+  .small{padding:4px 8px; font-size:.85rem}
+
+  main.wrap{ display:grid; grid-template-columns: 1.05fr .95fr; gap:14px; padding:14px 16px }
+  @media (max-width: 1000px){ main.wrap{ grid-template-columns:1fr } }
+
+  section.card{background:var(--panel); border:1px solid var(--border); border-radius:14px; overflow:hidden; min-height:300px}
+  section.card .head{display:flex; justify-content:space-between; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid var(--border)}
+  section.card h2{margin:0; font-size:1.1rem}
+  .board{ padding:12px; display:grid; gap:14px; }
+
+  .label{ font-size:.95rem; color:#222; margin-bottom:6px; font-weight:700; display:flex; align-items:center; gap:8px }
+  .hint{ font-size:.85rem; color:#666 }
+
+  /* Drop zones */
+  .drop{ background:#fff; border:1px dashed #b9c2d3; border-radius:12px; min-height:60px; padding:10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap }
+  .drop.digits{ min-height:56px }
+  .drop.is-over{ outline:2px solid var(--accent); outline-offset:2px }
+  .slot{ width:42px; height:52px; display:flex; align-items:center; justify-content:center; border:1px dashed #ccd4e3; border-radius:10px; font-size:1.2rem; background:#fff }
+
+  /* Chips (contenu placé) */
+  .chip{ background:var(--chip); border:1px solid #e3e7ef; color:#111; padding:6px 10px; border-radius:999px; font-weight:600; display:inline-flex; align-items:center; gap:6px; user-select:none }
+  .chip .x{ font-weight:900; cursor:pointer; opacity:.6 }
+  .chip .x:hover{ opacity:1 }
+
+  /* Tiles (pictogrammes à déplacer) */
+  .tiles{ padding:10px; display:grid; grid-template-columns: repeat(auto-fill, minmax(90px,1fr)); gap:8px }
+  .tile{ background:#fff; border:1px solid var(--border); border-radius:12px; padding:8px 8px 6px; text-align:center; cursor:grab; user-select:none; touch-action:none }
+  .tile:active{ cursor:grabbing }
+  .emoji{ font-size:24px }
+  .caption{ font-size:.85rem; font-weight:700; margin-top:4px }
+  /* Pour les chiffres: pas de légende texte, seulement l’emoji */
+  .tile[data-type="digit"] .caption{ display:none }
+
+  /* Grilles */
+  .grid-2{ display:grid; grid-template-columns: 1fr 1fr; gap:10px }
+  .grid-4{ display:grid; grid-template-columns: repeat(4, 1fr); gap:10px }
+
+  /* Ghost (tuile qui suit le doigt) */
+  #ghost{ position:fixed; z-index:9999; pointer-events:none; transform:translate(-50%,-50%); opacity:.95 }
+  #ghost .tile{ box-shadow:0 8px 20px rgba(0,0,0,.25) }
+
+  /* While dragging: prevent text selection and show grabbing cursor */
+  .no-select, .no-select * { user-select: none !important; -webkit-user-select: none !important; }
+  .dragging, .dragging * { cursor: grabbing !important; }
+
+  /* Impression */
+  @media print{
+    header, .tiles, .toolbar, .small, .chip .x { display:none !important; }
+    section.card{ border-color:#000; background:#fff }
+    .drop, .slot{ border-color:#000 }
+  }
+
+/* === Chips avec emoji au-dessus du mot (mood & weather) === */
+.drop .chip.chip-tile{
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  min-width: 56px;
+}
+.drop .chip.chip-tile .emoji{
+  font-size: 28px;
+  line-height: 1;
+}
+.drop .chip.chip-tile .caption{
+  font-size: 14px;
+  line-height: 1.1;
+  text-align: center;
+  white-space: nowrap;
+}
+.drop .chip.chip-tile .x{
+  position: absolute;
+  top: -6px;
+  right: -6px;
+}
+.drop .chip.chip-tile{ position: relative; }
+
+
+/* === Chips emoji au-dessus + taille chiffres uniformisée === */
+.drop .chip.chip-tile{
+  display:inline-flex;flex-direction:column;align-items:center;gap:4px;
+  padding:6px 8px;border-radius:10px;min-width:56px;position:relative;
+}
+.drop .chip.chip-tile .emoji{font-size:28px;line-height:1;}
+.drop .chip.chip-tile .caption{font-size:14px;line-height:1.1;text-align:center;white-space:nowrap;}
+.drop .chip.chip-tile .x{position:absolute;top:-6px;right:-6px;}
+
+.tile[data-type="digit"] .emoji,
+.tile.digit .emoji,
+.digits .emoji{
+  font-size:28px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;line-height:1;
+}
+
+
+  /* Date bar sizing */
+  #dropDay, #dropMonth { min-width: 120px; max-width: 120px; padding: 4px 6px; }
+  #dropYear { display:flex; flex-wrap:nowrap; gap:6px; }
+  #dropYear .slot { min-width:30px; max-width:30px; }
+
+  /* Ordinal suffix per slot in Day(number): slot[0] for 1-digit, slot[1] for 2-digit */
+  #dropNum .slot { position: relative; }
+  #dropNum .slot::after {
+    content: attr(data-ordinal);
+    position: absolute; top: 2px; right: 4px;
+    font-size: 0.7em; color: inherit; pointer-events: none;
+  }
+
+  /* Hideable hints */
+  .hint.hidden { display: none; }
+
+
+  hr.sep-blue   { border: none; border-top: 2px solid #2196f3; margin: 14px 0; }
+  hr.sep-green  { border: none; border-top: 2px solid #4caf50; margin: 14px 0; }
+  hr.sep-orange { border: none; border-top: 2px solid #ff9800; margin: 14px 0; }
+  hr.sep-purple { border: none; border-top: 2px solid #9c27b0; margin: 14px 0; }
+
+
+  hr.sep-blue   { border: none; border-top: 2px solid #2196f3; margin: 14px 0; }
+  hr.sep-green  { border: none; border-top: 2px solid #4caf50; margin: 14px 0; }
+  hr.sep-orange { border: none; border-top: 2px solid #ff9800; margin: 14px 0; }
+  hr.sep-purple { border: none; border-top: 2px solid #9c27b0; margin: 14px 0; }
+
+
+  .sep-line { border-top: 3px solid #4caf50; margin: 14px 0; height: 0; }
+
+
+#dropDay .chip .close,
+#dropMonth .chip .close {
+  display: none !important;
+}
+
+
+/* Hide delete cross specifically in Day and Month */
+#dropDay .chip .x,
+#dropMonth .chip .x {
+  display: none !important;
+}
+
+
+#dropDay,
+#dropMonth {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+</style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="toolbar">
+        <button class="btn btn-accent" id="btnToday">Remplir aujourd’hui</button>
+        <button class="btn" id="btnBuild">Mettre à jour la phrase</button>
+        <button class="btn" id="btnSpeak">Synthèse vocale</button>
+        <button class="btn" id="btnClearAll">Tout supprimer</button>
+        <button class="btn" onclick="window.print()">Imprimer</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- Tableau (gauche) -->
+    <section class="card" aria-labelledby="titleBoard">
+      <div class="head">
+        <h2 id="titleBoard">Date • Weather • Attendance • Mood</h2>
+      </div>
+      <div class="board" id="board">
+
+        <!-- Date --><div class="label">
+  <span>Date</span>
+  <button class="btn small" id="btnClearDate" title="Effacer la date">Effacer</button>
+</div>
+<div id="dateBar" style="display:flex; gap:12px; align-items:center; margin-bottom:12px;">
+  <div>
+    <div class="hint">Day</div>
+    <div class="drop" data-accept="day" id="dropDay"></div>
+  </div>
+  <div>
+    <div class="hint">Day (number)</div>
+    <div class="drop digits" data-accept="digit" id="dropNum">
+      <div class="slot"></div><div class="slot"></div>
+    </div>
+  </div>
+  <div>
+    <div class="hint">Month</div>
+    <div class="drop" data-accept="month" id="dropMonth"></div>
+  </div>
+  <div>
+    <div class="hint">Year</div>
+    <div class="drop digits" data-accept="digit" id="dropYear" style="display:flex; flex-wrap:nowrap; gap:6px;">
+      <div class="slot"></div><div class="slot"></div><div class="slot"></div><div class="slot"></div>
+    </div>
+  </div>
+</div>
+
+<div id="phraseBox">
+          <div id="phrase" style="font-size:1rem; line-height:1.35">Composez votre phrase…</div><div class="print-hide" style="margin-top:8px"><div style="text-align:right;"><button class="btn small" id="btnSpeakPhrase">🔊 Lire la phrase</button></div>
+<div style="height:6px;background:#4caf50;border-radius:3px;margin:12px 0;"></div></div>
+        </div>
+
+        
+
+
+        <div>
+          <div class="label">
+            <span>Weather</span>
+            <button class="btn small" onclick="clearZone('weather')">Effacer</button>
+          </div>
+          <div class="drop" data-accept="weather" id="dropWeather"></div>
+          <div class="hint">Jusqu’à 2 pictos max</div>
+        </div>
+
+        
+<div style="height:6px;background:#ff9800;border-radius:3px;margin:12px 0;"></div>
+<!-- Attendance -->
+        <div>
+          <div class="label">
+            <span>Attendance</span>
+            <button class="btn small" onclick="clearZone('attendance')">Effacer</button>
+          </div>
+          <div class="grid-2">
+            <div>
+              <div class="hint">Present</div>
+              <div class="drop digits" data-accept="digit" id="dropPresent">
+                <div class="slot"></div><div class="slot"></div>
+              </div>
+            </div>
+            <div>
+              <div class="hint">Absent</div>
+              <div class="drop digits" data-accept="digit" id="dropAbsent">
+                <div class="slot"></div><div class="slot"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        
+<div style="height:6px;background:#9c27b0;border-radius:3px;margin:12px 0;"></div>
+<!-- Mood -->
+        <div>
+          <div class="label">
+            <span>Our mood today</span>
+            <button class="btn small" onclick="clearZone('mood')">Effacer</button>
+          </div>
+          <div class="drop" data-accept="mood" id="dropMood"></div>
+          <div class="hint">Jusqu’à 2 pictos max</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Pictogrammes (droite) -->
+    <section class="card" aria-labelledby="titleTiles">
+      <div class="head">
+        <h2 id="titleTiles">Pictogrammes</h2>
+        <div class="hint">Tactile : touchez une tuile puis la zone • Souris : glisser-déposer</div>
+      </div>
+      <div class="tiles" id="tiles">
+
+        <!-- Days -->
+        <div class="tile" data-type="day" data-value="Monday"><div class="emoji">📅</div><div class="caption">Monday</div></div>
+        <div class="tile" data-type="day" data-value="Tuesday"><div class="emoji">📅</div><div class="caption">Tuesday</div></div>
+        <div class="tile" data-type="day" data-value="Wednesday"><div class="emoji">📅</div><div class="caption">Wednesday</div></div>
+        <div class="tile" data-type="day" data-value="Thursday"><div class="emoji">📅</div><div class="caption">Thursday</div></div>
+        <div class="tile" data-type="day" data-value="Friday"><div class="emoji">📅</div><div class="caption">Friday</div></div>
+        <div class="tile" data-type="day" data-value="Saturday"><div class="emoji">📅</div><div class="caption">Saturday</div></div>
+        <div class="tile" data-type="day" data-value="Sunday"><div class="emoji">📅</div><div class="caption">Sunday</div></div>
+
+        <!-- Months -->
+        <div class="tile" data-type="month" data-value="January"><div class="emoji">🗓️</div><div class="caption">January</div></div>
+        <div class="tile" data-type="month" data-value="February"><div class="emoji">🗓️</div><div class="caption">February</div></div>
+        <div class="tile" data-type="month" data-value="March"><div class="emoji">🗓️</div><div class="caption">March</div></div>
+        <div class="tile" data-type="month" data-value="April"><div class="emoji">🗓️</div><div class="caption">April</div></div>
+        <div class="tile" data-type="month" data-value="May"><div class="emoji">🗓️</div><div class="caption">May</div></div>
+        <div class="tile" data-type="month" data-value="June"><div class="emoji">🗓️</div><div class="caption">June</div></div>
+        <div class="tile" data-type="month" data-value="July"><div class="emoji">🗓️</div><div class="caption">July</div></div>
+        <div class="tile" data-type="month" data-value="August"><div class="emoji">🗓️</div><div class="caption">August</div></div>
+        <div class="tile" data-type="month" data-value="September"><div class="emoji">🗓️</div><div class="caption">September</div></div>
+        <div class="tile" data-type="month" data-value="October"><div class="emoji">🗓️</div><div class="caption">October</div></div>
+        <div class="tile" data-type="month" data-value="November"><div class="emoji">🗓️</div><div class="caption">November</div></div>
+        <div class="tile" data-type="month" data-value="December"><div class="emoji">🗓️</div><div class="caption">December</div></div>
+
+        <!-- Digits -->
+        <div class="tile" data-type="digit" data-value="0"><div class="emoji">0️⃣</div><div class="caption">0</div></div>
+        <div class="tile" data-type="digit" data-value="1"><div class="emoji">1️⃣</div><div class="caption">1</div></div>
+        <div class="tile" data-type="digit" data-value="2"><div class="emoji">2️⃣</div><div class="caption">2</div></div>
+        <div class="tile" data-type="digit" data-value="3"><div class="emoji">3️⃣</div><div class="caption">3</div></div>
+        <div class="tile" data-type="digit" data-value="4"><div class="emoji">4️⃣</div><div class="caption">4</div></div>
+        <div class="tile" data-type="digit" data-value="5"><div class="emoji">5️⃣</div><div class="caption">5</div></div>
+        <div class="tile" data-type="digit" data-value="6"><div class="emoji">6️⃣</div><div class="caption">6</div></div>
+        <div class="tile" data-type="digit" data-value="7"><div class="emoji">7️⃣</div><div class="caption">7</div></div>
+        <div class="tile" data-type="digit" data-value="8"><div class="emoji">8️⃣</div><div class="caption">8</div></div>
+        <div class="tile" data-type="digit" data-value="9"><div class="emoji">9️⃣</div><div class="caption">9</div></div>
+
+        
+
+<!-- Weather -->
+        <div class="tile" data-type="weather" data-value="Sunny"><div class="emoji">☀️</div><div class="caption">Sunny</div></div>
+        <div class="tile" data-type="weather" data-value="Partly cloudy"><div class="emoji">⛅</div><div class="caption">Partly cloudy</div></div>
+        <div class="tile" data-type="weather" data-value="Cloudy"><div class="emoji">☁️</div><div class="caption">Cloudy</div></div>
+        <div class="tile" data-type="weather" data-value="Rainy"><div class="emoji">🌧️</div><div class="caption">Rainy</div></div>
+        <div class="tile" data-type="weather" data-value="Stormy"><div class="emoji">⛈️</div><div class="caption">Stormy</div></div>
+        <div class="tile" data-type="weather" data-value="Snowy"><div class="emoji">❄️</div><div class="caption">Snowy</div></div>
+        <div class="tile" data-type="weather" data-value="Windy"><div class="emoji">🌬️</div><div class="caption">Windy</div></div>
+        <div class="tile" data-type="weather" data-value="Foggy"><div class="emoji">🌫️</div><div class="caption">Foggy</div></div>
+        <div class="tile" data-type="weather" data-value="Rainbow"><div class="emoji">🌈</div><div class="caption">Rainbow</div></div>
+
+        
+<!-- Mood -->
+        <div class="tile" data-type="mood" data-value="Happy"><div class="emoji">😀</div><div class="caption">Happy</div></div>
+        <div class="tile" data-type="mood" data-value="Fine"><div class="emoji">🙂</div><div class="caption">Fine</div></div>
+        <div class="tile" data-type="mood" data-value="Okay"><div class="emoji">😐</div><div class="caption">Okay</div></div>
+        <div class="tile" data-type="mood" data-value="Tired"><div class="emoji">😴</div><div class="caption">Tired</div></div>
+        <div class="tile" data-type="mood" data-value="Confused"><div class="emoji">😕</div><div class="caption">Confused</div></div>
+        <div class="tile" data-type="mood" data-value="Excited"><div class="emoji">🤩</div><div class="caption">Excited</div></div>
+        <div class="tile" data-type="mood" data-value="Angry"><div class="emoji">😡</div><div class="caption">Angry</div></div>
+        <div class="tile" data-type="mood" data-value="Sad"><div class="emoji">😢</div><div class="caption">Sad</div></div>
+        <div class="tile" data-type="mood" data-value="Proud"><div class="emoji">🏆</div><div class="caption">Proud</div></div>
+
+      </div>
+    </section>
+  </main>
+
+<!-- Drag & Drop 100% pointer‑events (aucune API DnD) -->
+<script>
+(function(){
+  let dragging = null;   // {type, value}
+  let ghost = null;
+  let _selBlocker = null;
+
+  function beginDrag(tile, x, y){
+    document.body.classList.add('no-select','dragging');
+    _selBlocker = (e)=>{ e.preventDefault(); };
+    document.addEventListener('selectstart', _selBlocker, {capture:true});
+    dragging = {
+      type: tile.dataset.type || '',
+      value: tile.dataset.value || tile.innerText.trim(),
+      emoji: (tile.querySelector('.emoji')?.textContent || '').trim(),
+      caption: (tile.querySelector('.caption')?.textContent || '').trim()
+    };
+    ghost = document.createElement('div');
+    ghost.id = 'ghost';
+    ghost.innerHTML = tile.outerHTML;
+    document.body.appendChild(ghost);
+    moveGhost(x, y);
+  }
+  function moveGhost(x, y){
+    if(ghost){ ghost.style.left = x + 'px'; ghost.style.top = y + 'px'; }
+  }
+  function endDrag(x, y){
+    if(!dragging){ cleanup(); return; }
+    const el = document.elementFromPoint(x, y);
+    const drop = el && el.closest ? el.closest('.drop') : null;
+    if(drop && accepts(drop, dragging.type)){
+      placeInto(drop, dragging);
+    }
+    cleanup();
+  }
+  function cleanup(){
+    document.body.classList.remove('no-select','dragging');
+    if(_selBlocker){ try{ document.removeEventListener('selectstart', _selBlocker, {capture:true}); }catch(e){} _selBlocker=null; }
+    dragging = null;
+    if(ghost && ghost.remove) ghost.remove();
+    ghost = null;
+  }
+  function accepts(drop, type){
+    const list = (drop.dataset.accept || '').split(',').map(s=>s.trim()).filter(Boolean);
+    return list.includes(type);
+  }
+  function placeInto(drop, payload){
+    if(drop.classList.contains('digits')){
+      const slots = Array.from(drop.querySelectorAll('.slot'));
+      const free = slots.find(s => (s.textContent||'').trim()==='');
+      if(free){ free.textContent = payload.value; }
+      else if(slots.length){ slots[slots.length-1].textContent = payload.value; }
+    }else{
+      // For mood and weather, keep emoji above the word
+      if (payload.type==='weather' || payload.type==='mood'){
+        const chip = document.createElement('span');
+        chip.className = 'chip chip-tile';
+        chip.innerHTML = '<span class="emoji"></span><span class="caption txt"></span><span class="x" title="Supprimer">×</span>';
+        chip.querySelector('.emoji').textContent = payload.emoji || '';
+        chip.querySelector('.caption').textContent = payload.value;
+        chip.dataset.type = payload.type || '';
+        chip.dataset.value = payload.value || '';
+        chip.querySelector('.x').addEventListener('click', ()=>{ chip.remove(); buildPhrase(); });
+        drop.appendChild(chip);
+        buildPhrase();
+        return;
+      }
+      // Singletons stricts : day, month
+      if(['day','month'].includes(payload.type)){
+        drop.querySelectorAll('.chip').forEach(n=>n.remove());
+      }
+      // Autoriser jusqu'à 2 pictos pour weather et mood
+      if(['weather','mood'].includes(payload.type)){
+        const chips = drop.querySelectorAll('.chip');
+        if(chips.length >= 2) { buildPhrase(); return; }
+      }
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.innerHTML = '<span class="txt"></span><span class="x" title="Supprimer">×</span>';
+      chip.querySelector('.txt').textContent = payload.value;
+      chip.querySelector('.x').addEventListener('click', ()=>{ chip.remove(); buildPhrase(); });
+      drop.appendChild(chip);
+    }
+    buildPhrase();
+  }
+
+  // Bind tiles (pointer events)
+  document.querySelectorAll('.tile').forEach(tile=>{
+    tile.addEventListener('pointerdown', (ev)=>{
+      ev.preventDefault();
+      tile.setPointerCapture(ev.pointerId);
+      beginDrag(tile, ev.clientX, ev.clientY);
+    });
+    tile.addEventListener('pointermove', (ev)=>{
+      if(!dragging) return;
+      moveGhost(ev.clientX, ev.clientY);
+    });
+    tile.addEventListener('pointerup', (ev)=>{
+      endDrag(ev.clientX, ev.clientY);
+      try{ tile.releasePointerCapture(ev.pointerId); }catch(e){}
+    });
+  });
+  document.addEventListener('pointermove', (ev)=>{ if(dragging) moveGhost(ev.clientX, ev.clientY); });
+  document.addEventListener('pointerup', (ev)=>{ if(dragging) endDrag(ev.clientX, ev.clientY); });
+
+  // CLEAR helpers
+  window.clearZone = function(zone){
+    if(zone==='date'){
+      document.getElementById('dropDay').innerHTML = '';
+      document.getElementById('dropMonth').innerHTML = '';
+      resetSlots('dropNum', 2);
+      resetSlots('dropYear', 4);
+    }else if(zone==='weather'){
+      document.getElementById('dropWeather').innerHTML = '';
+    }else if(zone==='attendance'){
+      resetSlots('dropPresent', 2);
+      resetSlots('dropAbsent', 2);
+    }else if(zone==='mood'){
+      document.getElementById('dropMood').innerHTML = '';
+    }
+    buildPhrase();
+  };
+  window.resetSlots = function(id, count){
+    const el = document.getElementById(id);
+    el.innerHTML = '';
+    for(let i=0;i<count;i++){
+      const s = document.createElement('div'); s.className='slot'; el.appendChild(s);
+    }
+  };
+  document.getElementById('btnClearAll').addEventListener('click', ()=>{
+    clearZone('date'); clearZone('weather'); clearZone('attendance'); clearZone('mood');
+  });
+
+  // Utilities
+  function chipsText(id){
+    return [...document.querySelectorAll('#'+id+' .chip .txt')].map(x=>x.textContent.trim());
+  }
+  function digits(id){
+    return [...document.querySelectorAll('#'+id+' .slot')].map(x=>x.textContent.trim()).join('');
+  }
+  function ordinal(n){
+    n = parseInt(n||'')||0;
+    const s=["th","st","nd","rd"], v=n%100;
+    return n + (s[(v-20)%10] || s[v] || s[0]);
+  }
+
+  function sentence(){
+    const day = (chipsText('dropDay')[0]||'');
+    const month = (chipsText('dropMonth')[0]||'');
+    const dd = digits('dropNum');
+    const yyyy = digits('dropYear');
+    const pres = digits('dropPresent');
+    const abs = digits('dropAbsent');
+
+    const weatherList = chipsText('dropWeather').map(x=>x.toLowerCase());
+    const moodList = chipsText('dropMood').map(x=>x.toLowerCase());
+
+    const parts = [];
+    if(day && dd && month && yyyy){ parts.push(`Today is ${day}, the ${ordinal(dd)} of ${month}, ${yyyy}.`); }
+    else if(day && month){ parts.push(`Today is ${day}, ${month}.`); }
+    else { parts.push(`Today is our English warm‑up.`); }
+
+    if(weatherList.length){
+      const w = weatherList.join(' and ');
+      parts.push(`The weather is ${w}.`);
+    }
+    if(pres){
+      parts.push(`We are ${pres} present${abs?` and ${abs} absent`:''}.`);
+    }
+    if(moodList.length){
+      // Per previous preference, use I instead of We for mood
+      const first = moodList[0]||'';
+      const be = /^(angry|sad|tired|confused)$/i.test(first) ? 'I feel' : 'I am';
+      parts.push(`${be} ${moodList.join(' and ')}.`);
+    }
+    return parts.join(' ');
+  }
+  window.buildPhrase = function(){ const el=document.getElementById('phrase'); if(el) el.textContent = sentence(); };
+  document.getElementById('btnBuild').addEventListener('click', buildPhrase);
+
+  // TTS
+  function speak(text){
+    try{
+      if(!('speechSynthesis' in window)) { alert('La synthèse vocale n\u2019est pas supportée par ce navigateur.'); return; }
+      const u = new SpeechSynthesisUtterance(text||sentence());
+      function go(){
+        const voices = speechSynthesis.getVoices();
+        const en = voices.find(v=>/^en(-|_)(GB|US|AU|CA|IE)/i.test(v.lang)) || voices.find(v=>/^en/i.test(v.lang));
+        if(en) u.voice = en; u.lang=(en&&en.lang)||'en-GB'; u.rate=0.95; u.pitch=1.0;
+        speechSynthesis.cancel(); speechSynthesis.speak(u);
+      }
+      if(speechSynthesis.getVoices().length===0){
+        const once=()=>{ go(); speechSynthesis.removeEventListener('voiceschanged', once); };
+        speechSynthesis.addEventListener('voiceschanged', once);
+        setTimeout(go, 600);
+      }else go();
+    }catch(e){ console.warn(e); }
+  }
+  document.getElementById('btnSpeak').addEventListener('click', ()=> speak());
+  document.getElementById('btnSpeakPhrase')?.addEventListener('click', ()=> speak());
+  document.addEventListener('keydown', (e)=>{ if(e.code==='Space' && !e.repeat){ e.preventDefault(); speak(); } });
+
+  // Today + Weather (à la demande seulement)
+  function todayParis(){
+    try{
+      const s = new Date().toLocaleString('en-GB',{timeZone:'Europe/Paris',weekday:'long',year:'numeric',month:'long',day:'2-digit'});
+      const [dayName, rest] = s.split(/,\s*/); const [dd, monthName, yyyy] = (rest||'').split(' ');
+      return { dayName, dd, monthName, yyyy };
+    }catch(e){
+      const d=new Date();
+      return { dayName:d.toLocaleString('en-GB',{weekday:'long'}), dd:String(d.getDate()).padStart(2,'0'), monthName:d.toLocaleString('en-GB',{month:'long'}), yyyy:String(d.getFullYear()) };
+    }
+  }
+  function setChip(id, text){
+    const el=document.getElementById(id); if(!el) return;
+    el.innerHTML='';
+    if(id==='dropWeather' || id==='dropMood'){
+      const c=document.createElement('span'); c.className='chip chip-tile';
+      c.innerHTML='<span class="emoji"></span><span class="caption txt"></span><span class="x" title="Supprimer">×</span>';
+      // Emoji mapping (very simple)
+      function emojiFor(type, label){
+        const t=(label||'').toLowerCase();
+        if(type==='weather'){
+          if(/sun|clear/.test(t)) return '☀️';
+          if(/cloud/.test(t) && /sun/.test(t)) return '⛅️';
+          if(/cloud/.test(t)) return '☁️';
+          if(/rain|shower/.test(t)) return '🌧️';
+          if(/storm|thunder/.test(t)) return '⛈️';
+          if(/snow/.test(t)) return '❄️';
+          if(/fog|mist/.test(t)) return '🌫️';
+          return '🌤️';
+        }
+        if(type==='mood'){
+          if(/happy|good|fine|great|awesome|fantastic/.test(t)) return '😊';
+          if(/tired|sleepy/.test(t)) return '😴';
+          if(/sad|bad|not good/.test(t)) return '😕';
+          return '🙂';
+        }
+        return '⭐️';
+      }
+      const typ = (id==='dropWeather')?'weather':'mood';
+      c.querySelector('.emoji').textContent = emojiFor(typ, text);
+      c.querySelector('.caption').textContent = text;
+      c.dataset.type = typ; c.dataset.value = text;
+      c.querySelector('.x').addEventListener('click', ()=>{ c.remove(); buildPhrase(); });
+      el.appendChild(c);
+    }else{
+      const c=document.createElement('span'); c.className='chip';
+      c.innerHTML='<span class="txt"></span><span class="x" title="Supprimer">×</span>';
+      c.querySelector('.txt').textContent = text;
+      c.querySelector('.x').addEventListener('click', ()=>{ c.remove(); buildPhrase(); });
+      el.appendChild(c);
+    }
+  }
+  function mapWeatherCode(code){
+    code=Number(code);
+    if([0].includes(code)) return 'Sunny';
+    if([1,2,3].includes(code)) return 'Partly cloudy';
+    if([45,48].includes(code)) return 'Foggy';
+    if([51,53,55,61,63,65,80,81,82].includes(code)) return 'Rainy';
+    if([71,73,75,85,86].includes(code)) return 'Snowy';
+    if([95,96,99].includes(code)) return 'Stormy';
+    return 'Cloudy';
+  }
+  async function fillWeather(){
+    try{
+      const pos = await new Promise((res, rej)=> navigator.geolocation.getCurrentPosition(res, rej, {enableHighAccuracy:true, timeout:6000}));
+      const lat = pos.coords.latitude.toFixed(4), lon = pos.coords.longitude.toFixed(4);
+      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+      const j = await r.json(); const code = j && j.current_weather && j.current_weather.weathercode;
+      setChip('dropWeather', mapWeatherCode(code));
+    }catch(e){ /* silencieux si refus */ }
+  }
+  document.getElementById('btnToday').addEventListener('click', ()=>{
+    const { dayName, dd, monthName, yyyy } = todayParis();
+    setChip('dropDay', dayName);
+    setChip('dropMonth', (monthName||'').replace(/^./, c=>c.toUpperCase()));
+    const numSlots=document.querySelectorAll('#dropNum .slot'); if(numSlots.length){ numSlots[0].textContent=dd[0]; numSlots[1].textContent=dd[1]; }
+    const yearSlots=document.querySelectorAll('#dropYear .slot'); if(yearSlots.length){ yearSlots[0].textContent=yyyy[0]; yearSlots[1].textContent=yyyy[1]; yearSlots[2].textContent=yyyy[2]; yearSlots[3].textContent=yyyy[3]; }
+    fillWeather();
+    buildPhrase();
+  });
+
+  // init
+  buildPhrase();
+})();
+</script>
+
+<script>
+(function(){
+  // Hide/show hints based on content
+  function digitsFromSlots(containerId){
+    var slots = document.querySelectorAll('#'+containerId+' .slot');
+    var s='';
+    for (var i=0;i<slots.length;i++){ s += (slots[i].textContent||'').trim(); }
+    return s;
+  }
+  function hasContent(dropId){
+    var el = document.getElementById(dropId);
+    if(!el) return false;
+    if (el.querySelector('.chip')) return true;
+    return ((el.textContent||'').trim().length>0);
+  }
+  function updateHints(){
+    var dayHint = document.querySelector('#dropDay')?.parentElement?.querySelector('.hint');
+    if(dayHint) dayHint.classList.toggle('hidden', hasContent('dropDay'));
+
+    var numHint = document.querySelector('#dropNum')?.parentElement?.querySelector('.hint');
+    if(numHint) numHint.classList.toggle('hidden', digitsFromSlots('dropNum').length >= 1);
+
+    var monHint = document.querySelector('#dropMonth')?.parentElement?.querySelector('.hint');
+    if(monHint) monHint.classList.toggle('hidden', hasContent('dropMonth'));
+
+    var yearHint = document.querySelector('#dropYear')?.parentElement?.querySelector('.hint');
+    if(yearHint) yearHint.classList.toggle('hidden', digitsFromSlots('dropYear').length >= 4);
+  }
+
+  // Ordinal placement logic per slot
+  function refreshOrdinal(){
+    var cont = document.getElementById('dropNum');
+    if(!cont) return;
+    var slots = cont.querySelectorAll('.slot');
+    var d0 = (slots[0] && slots[0].textContent || '').trim();
+    var d1 = (slots[1] && slots[1].textContent || '').trim();
+    var numStr = (d0 + d1).replace(/\D/g, '');
+    var n = parseInt(numStr || '', 10);
+    var suf = '';
+    if(!isNaN(n) && n > 0){
+      if(n % 100 >= 11 && n % 100 <= 13) suf = 'th';
+      else { switch(n % 10){ case 1: suf='st'; break; case 2: suf='nd'; break; case 3: suf='rd'; break; default: suf='th'; } }
+    }
+    // Clear previous
+    for (var i=0;i<slots.length;i++){ if (slots[i]) slots[i].removeAttribute('data-ordinal'); }
+    if (suf){
+      if (d1) { if (slots[1]) slots[1].setAttribute('data-ordinal', suf); }
+      else if (d0) { if (slots[0]) slots[0].setAttribute('data-ordinal', suf); }
+    }
+  }
+
+  // Clear button next to "Date"
+  function clearDateCustom(){
+    ['dropDay','dropNum','dropMonth','dropYear'].forEach(function(id){
+      var el = document.getElementById(id); if(!el) return;
+      if (el.classList.contains('digits')){
+        el.querySelectorAll('.slot').forEach(function(s){ s.textContent=''; });
+      }else{
+        el.innerHTML='';
+      }
+      if(id==='dropNum'){
+        el.querySelectorAll('.slot').forEach(function(s){ s.removeAttribute('data-ordinal'); });
+      }
+    });
+    refreshOrdinal(); updateHints();
+  }
+
+  // After the original script has set up everything
+  document.addEventListener('DOMContentLoaded', function(){
+    // Observe date zones to auto-update
+    ['dropDay','dropNum','dropMonth','dropYear'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(!el) return;
+      var obs = new MutationObserver(function(){ refreshOrdinal(); updateHints(); });
+      obs.observe(el, { childList:true, subtree:true, characterData:true });
+    });
+    refreshOrdinal(); updateHints();
+
+    // Wire clear date button
+    var btnClr = document.getElementById('btnClearDate');
+    if(btnClr) btnClr.addEventListener('click', function(e){ e.preventDefault(); clearDateCustom(); });
+
+    // Add a post-fix after original "Today" handler: strip leading zero & refresh
+    var btnToday = document.getElementById('btnToday');
+    if(btnToday){
+      btnToday.addEventListener('click', function(){
+        // Run shortly after original handler
+        setTimeout(function(){
+          // Normalize day number to no leading zero
+          var slots = document.querySelectorAll('#dropNum .slot');
+          var s = Array.from(slots).map(function(x){ return (x.textContent||'').trim(); }).join('');
+          s = s.replace(/^0+/, '');
+          if (slots.length>=2){
+            if (s.length===1){ slots[0].textContent = s; slots[1].textContent=''; }
+            else if (s.length>=2){ slots[0].textContent = s[0]; slots[1].textContent = s[1]; }
+          }
+          refreshOrdinal(); updateHints();
+        }, 0);
+      });
+    }
+  });
+})();
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  var btn = document.getElementById('btnToday');
+  if(!btn) return;
+  btn.addEventListener('click', function(){
+    // Run after the original handler has filled the date
+    setTimeout(function(){
+      try { if (typeof fillWeather === 'function') fillWeather(); } catch(e){}
+      // Rebuild phrase shortly after weather potentially updates chips
+      setTimeout(function(){
+        try { if (typeof buildPhrase === 'function') buildPhrase(); } catch(e){}
+      }, 50);
+    }, 0);
+  });
+});
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  var btn = document.getElementById('btnToday');
+  if(!btn) return;
+  btn.addEventListener('click', function(){
+    // Trigger weather fill (non-blocking)
+    try { if (typeof fillWeather === 'function') fillWeather(); } catch(e){}
+    // Poll for weather presence up to ~3s, then build phrase
+    var waited = 0;
+    var iv = setInterval(function(){
+      var cont = document.getElementById('dropWeather');
+      var has = !!(cont && (cont.querySelector('.chip') || (cont.textContent||'').trim().length>0));
+      if (has || waited >= 3000){
+        clearInterval(iv);
+        try { if (typeof buildPhrase === 'function') buildPhrase(); } catch(e){}
+      }
+      waited += 100;
+    }, 100);
+  });
+});
+</script>
+
+</body>
+</html>
